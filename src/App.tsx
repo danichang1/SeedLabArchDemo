@@ -6,29 +6,54 @@ import * as z from "zod";
 import { useState } from 'react';
 import Snackbar from '@mui/material/Snackbar';
 
+const positiveNumber = (label: string) =>
+  z.string().refine(
+    (val) => val !== "" && !isNaN(Number(val)) && Number(val) > 0,
+    `${label} must be a positive number`
+  );
+
 // define schema for form inputs with validation
 const formSchema = z.object({
-  sampleWeight: z.string().refine(
-    (val) => val !== "" && !isNaN(Number(val)) && Number(val) > 0,
-    "Sample weight must be a positive number"
-  ),
-  bulkWeight: z.string().refine(
-    (val) => val !== "" && !isNaN(Number(val)) && Number(val) > 0,
-    "Bulk weight must be a positive number"
-  ),
-  prepWeight: z.string().refine(
-    (val) => val !== "" && !isNaN(Number(val)) && Number(val) > 0,
-    "Prep weight must be a positive number"
-  ),
-})
+  sampleWeight: positiveNumber("Sample weight"),
+  bulkWeight: positiveNumber("Bulk weight"),
+  prepWeight: positiveNumber("Prep weight"),
+});
 
+function NumberField({ form, name, label }) {
+  return (
+    <form.Field
+      name={name}
+      children={(field) => {
+        const isInvalid =
+          field.state.meta.isTouched && !field.state.meta.isValid;
+
+        return (
+          <TextField
+            id={name}
+            label={label}
+            value={field.state.value ?? ""}
+            onBlur={field.handleBlur}
+            onChange={(e) => field.handleChange(e.target.value)}
+            error={isInvalid}
+            helperText={
+              isInvalid
+                ? (field.state.meta.errors[0] as { message: string }).message
+                : ""
+            }
+          />
+        );
+      }}
+    />
+  );
+}
 export default function App() {
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
   const form = useForm({
     validators: {
-      onChange: formSchema
+      onChange: formSchema,
+      onMount: formSchema,
     },
     onSubmit: async ({ value }) => {
       setToastMessage(JSON.stringify(value));
@@ -50,72 +75,17 @@ export default function App() {
         }}
       >
         <FormControl>
-          <form.Field
-            name="sampleWeight"
-            children={(field) => {
-              const isInvalid =
-                field.state.meta.isTouched && !field.state.meta.isValid
-              return (
-                <TextField
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value ?? ''}
-                  label="Sample Weight"
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  error={isInvalid}
-                  helperText={isInvalid
-                    ? (field.state.meta.errors[0] as { message: string }).message
-                    : '' }
-                />
-              )
-            }}
-          />
-          <form.Field
-            name="bulkWeight"
-            children={(field) => {
-              const isInvalid =
-                field.state.meta.isTouched && !field.state.meta.isValid
-              return (
-                <TextField
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value ?? ''}
-                  label="Bulk Weight"
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  error={isInvalid}
-                  helperText={isInvalid
-                    ? (field.state.meta.errors[0] as { message: string }).message
-                    : ''}
-                />
-              )
-            }}
-          />
-          <form.Field
-            name="prepWeight"
-            children={(field) => {
-              const isInvalid =
-                field.state.meta.isTouched && !field.state.meta.isValid
-              return (
-                <TextField
-                  id={field.name}
-                  name={field.name}
-                  value={field.state.value ?? ''}
-                  label="Prep Weight"
-                  onBlur={field.handleBlur}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  error={isInvalid}
-                  helperText={isInvalid
-                    ? (field.state.meta.errors[0] as { message: string }).message
-                    : ''}
-                />
-              )
-            }}
-          />
+          <NumberField form={form} name="sampleWeight" label="Sample Weight" />
+          <NumberField form={form} name="bulkWeight" label="Bulk Weight" />
+          <NumberField form={form} name="prepWeight" label="Prep Weight" />
+          <form.Subscribe
+            selector={(state) => [state.canSubmit]}
+            children={([canSubmit]) => (
+              <Button type="submit" disabled={!canSubmit}>Submit</Button>
+             )}
+          />  
         </FormControl>
       </form>
-      <Button type="submit" form="mix-prep-form">Submit</Button>
       <Snackbar
         open={toastOpen}
         autoHideDuration={2000}
